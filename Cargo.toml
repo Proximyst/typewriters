@@ -30,3 +30,7 @@ features = ["full"]
 version = "~1"
 features = ["derive"]
 
+[dependencies.chrono]
+version = "~0.4"
+features = ["serde"]
+
