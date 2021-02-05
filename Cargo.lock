@@ -153,6 +153,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
+ "serde",
  "time",
  "winapi",
 ]
@@ -438,6 +439,18 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi 0.10.2+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "getset"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24b328c01a4d71d2d8173daa93562a73ab0fe85616876f02500f53d82948c504"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -975,6 +988,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 
 [[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1173,17 +1210,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rss"
-version = "1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02e70d6ae72f8a4333af8ce9dce58942020528430eb0d46ee2fcb5e8d4d16377"
-dependencies = [
- "atom_syndication",
- "derive_builder",
- "quick-xml",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1251,6 +1277,20 @@ name = "serde"
 version = "1.0.123"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92d5161132722baa40d802cc70b15262b98258453e85e5d1d365c757c73869ae"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.123"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9391c295d64fc0abb2c556bad848f33cb8296276b1ad2677d1ae1ace4f258f31"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "serde_json"
@@ -1653,16 +1693,21 @@ checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
 name = "typewriters"
 version = "0.1.0"
 dependencies = [
+ "atom_syndication",
+ "chrono",
  "dotenv",
  "eyre",
+ "getset",
  "once_cell",
  "reqwest",
- "rss",
+ "serde",
+ "serde_json",
  "snafu",
  "stable-eyre",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
  "warp",
 ]
 
