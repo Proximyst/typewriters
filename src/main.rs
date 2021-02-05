@@ -1,3 +1,7 @@
+#![forbid(unsafe_code)]
+#![warn(rust_2018_idioms)]
+#![warn(clippy::all)]
+
 pub mod prelude {
     pub use tracing::{debug, error, info, trace, warn};
 }
