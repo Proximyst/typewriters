@@ -22,7 +22,7 @@ pub static REQWEST: Lazy<ReqwestClient> = Lazy::new(|| {
 use self::prelude::*;
 use once_cell::sync::Lazy;
 use reqwest::Client as ReqwestClient;
-use stable_eyre::eyre::{eyre, Report, WrapErr as _};
+use stable_eyre::eyre::{Report, WrapErr as _};
 
 #[tokio::main]
 async fn main() -> Result<(), Report> {
