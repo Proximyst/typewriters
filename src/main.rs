@@ -3,6 +3,8 @@
 #![warn(clippy::all)]
 
 pub mod prelude {
+    pub use getset::*;
+    pub use snafu::{ResultExt, Snafu};
     pub use tracing::{debug, error, info, trace, warn};
 
     use once_cell::sync::Lazy;

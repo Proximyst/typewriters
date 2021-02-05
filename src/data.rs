@@ -6,4 +6,3 @@ pub struct HeadData {
     build: String,
     version: String,
 }
-

@@ -14,13 +14,15 @@ pub static GITHUB: Lazy<Github> = Lazy::new(|| {
     Github { repository }
 });
 
-static DOMAIN: Lazy<String> = Lazy::new(|| env::var("GITHUB_DOMAIN").unwrap_or_else(|_| String::from("https://www.github.com")));
-static API_DOMAIN: Lazy<String> = Lazy::new(|| env::var("GITHUB_API_DOMAIN").unwrap_or_else(|_| String::from("https://api.github.com")));
+static DOMAIN: Lazy<String> = Lazy::new(|| {
+    env::var("GITHUB_DOMAIN").unwrap_or_else(|_| String::from("https://www.github.com"))
+});
+static API_DOMAIN: Lazy<String> = Lazy::new(|| {
+    env::var("GITHUB_API_DOMAIN").unwrap_or_else(|_| String::from("https://api.github.com"))
+});
 
 pub struct Github {
     repository: String,
 }
 
-impl Github {
-}
-
+impl Github {}
