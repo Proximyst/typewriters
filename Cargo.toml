@@ -38,3 +38,7 @@ features = ["derive"]
 version = "~0.4"
 features = ["serde"]
 
+[dev-dependencies]
+mockito = "~0.29"
+pretty_assertions = "~0.6"
+maplit = "~1.0"
