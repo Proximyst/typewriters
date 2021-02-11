@@ -3,37 +3,23 @@
 
 use crate::prelude::*;
 use chrono::prelude::*;
-use once_cell::sync::Lazy;
 use reqwest::header;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::env;
 use url::Url;
 #[cfg(test)]
 use mockito;
 
-pub static PAPER: Lazy<Paper> = Lazy::new(|| Paper { __priv: () });
-
-#[cfg(not(test))]
-static API_DOMAIN: Lazy<String> = Lazy::new(|| {
-    env::var("PAPER_API_DOMAIN").unwrap_or_else(|_| String::from("https://papermc.io/api"))
-});
-#[cfg(test)]
-static API_DOMAIN: Lazy<String> = Lazy::new(|| String::from(&mockito::server_url()));
-
-#[cfg(not(test))]
-static PROJECT_NAME: Lazy<String> =
-    Lazy::new(|| env::var("PAPER_PROJECT").unwrap_or_else(|_| String::from("paper")));
-
-#[cfg(test)]
-static PROJECT_NAME: Lazy<String> = Lazy::new(|| String::from("paper"));
-
 const ACCEPT_JSON: &'static str = "application/json";
 
-pub struct Paper {
-    #[allow(dead_code)]
-    __priv: (),
+
+#[derive(Getters)]
+#[getset(get = "pub", set = "pub")]
+pub struct PaperApi {
+    domain: String,
+    project: String,
 }
+
 
 #[derive(Deserialize, Getters, Debug, PartialEq)]
 #[getset(get = "pub")]
@@ -111,9 +97,27 @@ pub enum Error {
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-impl Paper {
+impl Default for PaperApi {
+    fn default() -> PaperApi {
+        #[cfg(test)]
+        let domain = &mockito::server_url();
+        #[cfg(not(test))]
+        let domain = "https://papermc.io/api";
+        let project = "paper";
+        Self::new(domain, project)
+    }
+}
+
+impl PaperApi {
+    /// Create new PaperApi, using given domain and project
+    pub fn new<T, U>(domain: T, project: U) -> PaperApi where T: Into<String>, U: Into<String> {
+        PaperApi {
+            domain: domain.into(),
+            project: project.into(),
+        }
+    }
     pub async fn get_project(&self) -> Result<Project> {
-        let url = format!("{}/v2/projects/{}", &*API_DOMAIN, &*PROJECT_NAME);
+        let url = format!("{}/v2/projects/{}", self.domain, self.project);
         let url = Url::parse(&url).context(UrlParse { url })?;
 
         let response = REQWEST
@@ -132,7 +136,7 @@ impl Paper {
     pub async fn get_version(&self, version: &str) -> Result<Version> {
         let url = format!(
             "{}/v2/projects/{}/versions/{}",
-            &*API_DOMAIN, &*PROJECT_NAME, version,
+            self.domain, self.project, version,
         );
         let url = Url::parse(&url).context(UrlParse { url })?;
 
@@ -152,7 +156,7 @@ impl Paper {
     pub async fn get_build(&self, version: &str, build: i32) -> Result<VersionBuild> {
         let url = format!(
             "{}/v2/projects/{}/versions/{}/builds/{}",
-            &*API_DOMAIN, &*PROJECT_NAME, version, build,
+            self.domain, self.project, version, build,
         );
         let url = Url::parse(&url).context(UrlParse { url })?;
 
@@ -202,7 +206,7 @@ mod tests {
             version_groups: vec!["1.16", "1.17"].iter().map(|&s| s.into()).collect(),
             versions: vec!["1.16.3", "1.16.4", "1.16.5", "1.17.0"].iter().map(|&s| s.into()).collect(),
         };
-        let actual = PAPER.get_project().await.expect("Error getting project");
+        let actual = PaperApi::default().get_project().await.expect("Error getting project");
         project_mock.assert();
         assert_eq!(actual, expected);
     }
@@ -226,7 +230,7 @@ mod tests {
             }"#)
             .create();
         let expected = Version { builds: vec![463, 464, 465, 466] };
-        let actual = PAPER.get_version("1.16.5").await.expect("Error getting version");
+        let actual = PaperApi::default().get_version("1.16.5").await.expect("Error getting version");
         project_mock.assert();
         assert_eq!(actual, expected);
     }
@@ -272,7 +276,7 @@ mod tests {
                 }
             },
         };
-        let actual = PAPER.get_build("1.16.5", 466).await.expect("Error getting build");
+        let actual = PaperApi::default().get_build("1.16.5", 466).await.expect("Error getting build");
         project_mock.assert();
         assert_eq!(actual, expected);
     }

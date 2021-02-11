@@ -11,6 +11,7 @@ pub mod prelude {
     use reqwest::Client as ReqwestClient;
     use stable_eyre::eyre::WrapErr as _;
     use std::env;
+    use crate::{github::Github, paper::PaperApi};
 
     pub static REQWEST: Lazy<ReqwestClient> = Lazy::new(|| {
         ReqwestClient::builder()
@@ -26,6 +27,32 @@ pub mod prelude {
             .wrap_err("cannot create reqwest client")
             .unwrap()
     });
+
+    // TODO: Find a better place for these?
+    pub static GITHUB: Lazy<Github> = Lazy::new(|| {
+        let repository =
+            env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| String::from("PaperMC/Paper"));
+
+        info!("Using Github repository: {}", repository);
+
+        Github::new(repository)
+    });
+
+    static GITHUB_DOMAIN: Lazy<String> = Lazy::new(|| {
+        env::var("GITHUB_DOMAIN").unwrap_or_else(|_| String::from("https://www.github.com"))
+    });
+    static GITHUB_API_DOMAIN: Lazy<String> = Lazy::new(|| {
+        env::var("GITHUB_API_DOMAIN").unwrap_or_else(|_| String::from("https://api.github.com"))
+    });
+
+    static PAPER_API_DOMAIN: Lazy<String> = Lazy::new(|| {
+        env::var("PAPER_API_DOMAIN").unwrap_or_else(|_| String::from("https://papermc.io/api"))
+    });
+
+    static PAPER_PROJECT_NAME: Lazy<String> =
+        Lazy::new(|| env::var("PAPER_PROJECT").unwrap_or_else(|_| String::from("paper")));
+
+    pub static PAPER: Lazy<PaperApi> = Lazy::new(|| PaperApi::new(&*PAPER_API_DOMAIN, &*PAPER_PROJECT_NAME));
 }
 
 mod data;
