@@ -3,15 +3,14 @@
 
 use crate::prelude::*;
 use chrono::prelude::*;
+#[cfg(test)]
+use mockito;
 use reqwest::header;
 use serde::Deserialize;
 use std::collections::HashMap;
 use url::Url;
-#[cfg(test)]
-use mockito;
 
 const ACCEPT_JSON: &'static str = "application/json";
-
 
 #[derive(Getters)]
 #[getset(get = "pub", set = "pub")]
@@ -19,7 +18,6 @@ pub struct PaperApi {
     domain: String,
     project: String,
 }
-
 
 #[derive(Deserialize, Getters, Debug, PartialEq)]
 #[getset(get = "pub")]
@@ -64,19 +62,13 @@ pub struct Download {
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display("cannot parse url \"{}\": {}", url, source))]
-    UrlParse {
-        source: url::ParseError,
-        url: String,
-    },
+    UrlParse { source: url::ParseError, url: String },
 
     #[snafu(display("cannot fetch project: {}", source))]
     ProjectFetch { source: reqwest::Error },
 
     #[snafu(display("cannot fetch version {}: {}", version, source))]
-    VersionFetch {
-        source: reqwest::Error,
-        version: String,
-    },
+    VersionFetch { source: reqwest::Error, version: String },
 
     #[snafu(display("cannot fetch build {} b{}: {}", version, build, source))]
     BuildFetch {
@@ -89,10 +81,7 @@ pub enum Error {
     InvalidBody { source: reqwest::Error },
 
     #[snafu(display("invalid json returned: {}\nbody: {}", source, body))]
-    InvalidJson {
-        source: serde_json::Error,
-        body: String,
-    },
+    InvalidJson { source: serde_json::Error, body: String },
 }
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -110,12 +99,17 @@ impl Default for PaperApi {
 
 impl PaperApi {
     /// Create new PaperApi, using given domain and project
-    pub fn new<T, U>(domain: T, project: U) -> PaperApi where T: Into<String>, U: Into<String> {
+    pub fn new<T, U>(domain: T, project: U) -> PaperApi
+    where
+        T: Into<String>,
+        U: Into<String>,
+    {
         PaperApi {
             domain: domain.into(),
             project: project.into(),
         }
     }
+
     pub async fn get_project(&self) -> Result<Project> {
         let url = format!("{}/v2/projects/{}", self.domain, self.project);
         let url = Url::parse(&url).context(UrlParse { url })?;
@@ -177,17 +171,18 @@ impl PaperApi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pretty_assertions::{assert_eq, assert_ne};
-    use mockito::mock;
-    use tokio;
     use maplit::hashmap;
+    use mockito::mock;
+    use pretty_assertions::assert_eq;
+    use tokio;
 
     #[tokio::test]
     async fn check_project_parsing() {
         let project_mock = mock("GET", "/v2/projects/paper")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
               "project_id": "paper",
               "project_name": "Paper",
               "version_groups": [
@@ -200,24 +195,31 @@ mod tests {
                 "1.16.5",
                 "1.17.0"
               ]
-            }"#)
+            }"#,
+            )
             .create();
         let expected = Project {
             version_groups: vec!["1.16", "1.17"].iter().map(|&s| s.into()).collect(),
-            versions: vec!["1.16.3", "1.16.4", "1.16.5", "1.17.0"].iter().map(|&s| s.into()).collect(),
+            versions: vec!["1.16.3", "1.16.4", "1.16.5", "1.17.0"]
+                .iter()
+                .map(|&s| s.into())
+                .collect(),
         };
-        let actual = PaperApi::default().get_project().await.expect("Error getting project");
+        let actual = PaperApi::default()
+            .get_project()
+            .await
+            .expect("Error getting project");
         project_mock.assert();
         assert_eq!(actual, expected);
     }
-
 
     #[tokio::test]
     async fn check_version_parsing() {
         let project_mock = mock("GET", "/v2/projects/paper/versions/1.16.5")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
               "project_id": "paper",
               "project_name": "Paper",
               "version": "1.16.5",
@@ -227,10 +229,16 @@ mod tests {
                 465,
                 466
               ]
-            }"#)
+            }"#,
+            )
             .create();
-        let expected = Version { builds: vec![463, 464, 465, 466] };
-        let actual = PaperApi::default().get_version("1.16.5").await.expect("Error getting version");
+        let expected = Version {
+            builds: vec![463, 464, 465, 466],
+        };
+        let actual = PaperApi::default()
+            .get_version("1.16.5")
+            .await
+            .expect("Error getting version");
         project_mock.assert();
         assert_eq!(actual, expected);
     }
@@ -240,7 +248,8 @@ mod tests {
         let project_mock = mock("GET", "/v2/projects/paper/versions/1.16.5/builds/466")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
               "project_id": "paper",
               "project_name": "Paper",
               "version": "1.16.5",
@@ -259,11 +268,12 @@ mod tests {
                   "sha256": "58275a88331dc21c857be49fd7a9d70ba04843253e73e8a7424160b34529e04a"
                 }
               }
-            }"#)
+            }"#,
+            )
             .create();
         let expected = VersionBuild {
             build: 466,
-            time: Utc.ymd(2021,02,08).and_hms_milli(10, 22, 13, 662),
+            time: Utc.ymd(2021, 02, 08).and_hms_milli(10, 22, 13, 662),
             changes: vec![Change {
                 commit: "36a72cad3098a513375068008d3720d3aebc2d82".into(),
                 summary: "ChangeSummary".into(),
@@ -276,7 +286,10 @@ mod tests {
                 }
             },
         };
-        let actual = PaperApi::default().get_build("1.16.5", 466).await.expect("Error getting build");
+        let actual = PaperApi::default()
+            .get_build("1.16.5", 466)
+            .await
+            .expect("Error getting build");
         project_mock.assert();
         assert_eq!(actual, expected);
     }
