@@ -8,6 +8,7 @@ use mockito;
 use reqwest::header;
 use serde::Deserialize;
 use std::collections::HashMap;
+
 use url::Url;
 
 const ACCEPT_JSON: &'static str = "application/json";
@@ -26,16 +27,26 @@ pub struct Project {
     versions: Vec<String>,
 }
 
+type BuildNumber = i32;
 #[derive(Deserialize, Getters, Debug, PartialEq)]
 #[getset(get = "pub")]
 pub struct Version {
-    builds: Vec<i32>,
+    builds: Vec<BuildNumber>,
+}
+
+impl Version {
+    pub fn get_latest_build_number(&self) -> BuildNumber {
+        *self
+            .builds
+            .last()
+            .expect("There should always be at least one build for version")
+    }
 }
 
 #[derive(Deserialize, Getters, CopyGetters, Debug, PartialEq)]
 pub struct VersionBuild {
     #[getset(get_copy = "pub")]
-    build: i32,
+    build: BuildNumber,
     #[getset(get_copy = "pub")]
     time: DateTime<Utc>,
     #[getset(get = "pub")]
@@ -87,7 +98,7 @@ pub enum Error {
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 impl Default for PaperApi {
-    fn default() -> PaperApi {
+    fn default() -> Self {
         #[cfg(test)]
         let domain = &mockito::server_url();
         #[cfg(not(test))]
@@ -99,12 +110,12 @@ impl Default for PaperApi {
 
 impl PaperApi {
     /// Create new PaperApi, using given domain and project
-    pub fn new<T, U>(domain: T, project: U) -> PaperApi
+    pub fn new<T, U>(domain: T, project: U) -> Self
     where
         T: Into<String>,
         U: Into<String>,
     {
-        PaperApi {
+        Self {
             domain: domain.into(),
             project: project.into(),
         }
@@ -166,6 +177,64 @@ impl PaperApi {
 
         serde_json::from_str(&body).context(InvalidJson { body })
     }
+
+    pub async fn get_latest_build(&self, version: &str) -> Result<VersionBuild> {
+        let paper_version = self.get_version(version).await?;
+        self.get_build(version, paper_version.get_latest_build_number())
+            .await
+    }
+}
+
+pub struct PaperStream {
+    last_build: Option<BuildNumber>,
+    api: PaperApi,
+    version: String,
+}
+
+impl PaperStream {
+    pub fn new<T>(api: PaperApi, version: T) -> Self
+    where
+        T: Into<String>,
+    {
+        PaperStream {
+            last_build: None,
+            api,
+            version: version.into(),
+        }
+    }
+}
+
+#[async_trait]
+impl UpdateStream for PaperStream {
+    // TODO: Change to VersionBuild?
+    type Error = Error;
+    type Item = Version;
+
+    async fn fetch_update(&mut self) -> UpdateResult<Self::Item, Self::Error> {
+        let version = self.version.as_str();
+        let version_info = self.api.get_version(version).await?;
+        let latest_build = version_info.get_latest_build_number();
+        match self.last_build {
+            // TODO: Decide whether first run should always return an update or not
+            None => {
+                self.last_build = Some(latest_build);
+                Ok(None)
+            }
+            Some(build) => {
+                if (latest_build > build) {
+                    // Got a new version!
+                    self.last_build = Some(latest_build);
+                    Ok(Some(version_info))
+                } else if (latest_build == build) {
+                    // Nothing changed
+                    Ok(None)
+                } else {
+                    // TODO: We should probably handle it in case of hitting a different cached endpoint
+                    panic!("Did we go back in time?");
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -215,7 +284,7 @@ mod tests {
 
     #[tokio::test]
     async fn check_version_parsing() {
-        let project_mock = mock("GET", "/v2/projects/paper/versions/1.16.5")
+        let version_mock = mock("GET", "/v2/projects/paper/versions/1.16.5")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -239,13 +308,13 @@ mod tests {
             .get_version("1.16.5")
             .await
             .expect("Error getting version");
-        project_mock.assert();
+        version_mock.assert();
         assert_eq!(actual, expected);
     }
 
     #[tokio::test]
     async fn check_build_parsing() {
-        let project_mock = mock("GET", "/v2/projects/paper/versions/1.16.5/builds/466")
+        let build_mock = mock("GET", "/v2/projects/paper/versions/1.16.5/builds/466")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -290,7 +359,40 @@ mod tests {
             .get_build("1.16.5", 466)
             .await
             .expect("Error getting build");
-        project_mock.assert();
+        build_mock.assert();
         assert_eq!(actual, expected);
+    }
+
+    // TODO: Parameterize further
+    fn get_version_mock(build: BuildNumber) -> mockito::Mock {
+        mock("GET", "/v2/projects/paper/versions/1.16.5")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(format!(
+                r#"{{
+              "project_id": "paper",
+              "project_name": "Paper",
+              "version": "1.16.5",
+              "builds": [ {} ]
+            }}"#,
+                build
+            ))
+    }
+
+    #[tokio::test]
+    async fn check_stream_update() {
+        let mut stream = PaperStream::new(PaperApi::default(), "1.16.5");
+        {
+            let version_mock = get_version_mock(5).create();
+            let update = stream.fetch_update().await.expect("Update fetch should succeed");
+            version_mock.assert();
+            assert_eq!(update, None);
+        }
+        {
+            let version_mock = get_version_mock(6).create();
+            let update = stream.fetch_update().await.expect("Update fetch should succeed");
+            version_mock.assert();
+            assert!(matches!(update, Some(_)));
+        }
     }
 }

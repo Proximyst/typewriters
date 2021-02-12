@@ -3,6 +3,8 @@
 #![warn(clippy::all)]
 
 pub mod prelude {
+    pub use crate::stream::*;
+    pub use async_trait::async_trait;
     pub use getset::*;
     pub use snafu::{ResultExt, Snafu};
     pub use tracing::{debug, error, info, trace, warn};
@@ -55,6 +57,7 @@ pub mod prelude {
 mod data;
 mod github;
 mod paper;
+mod stream;
 
 use self::prelude::*;
 use stable_eyre::eyre::{Report, WrapErr as _};
