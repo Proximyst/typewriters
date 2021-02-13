@@ -31,18 +31,18 @@ pub mod prelude {
     });
 
     // TODO: Find a better place for these?
-    pub static GITHUB: Lazy<Github> = Lazy::new(|| {
-        let repository = env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| String::from("PaperMC/Paper"));
 
-        info!("Using Github repository: {}", repository);
-
-        Github::new(repository)
-    });
-
+    static GITHUB_REPOSITORY: Lazy<String> =
+        Lazy::new(|| env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| String::from("PaperMC/Paper")));
     static GITHUB_DOMAIN: Lazy<String> =
         Lazy::new(|| env::var("GITHUB_DOMAIN").unwrap_or_else(|_| String::from("https://www.github.com")));
     static GITHUB_API_DOMAIN: Lazy<String> = Lazy::new(|| {
         env::var("GITHUB_API_DOMAIN").unwrap_or_else(|_| String::from("https://api.github.com"))
+    });
+    pub static GITHUB: Lazy<Github> = Lazy::new(|| {
+        info!("Using Github repository: {}", &*GITHUB_REPOSITORY);
+
+        Github::new(&*GITHUB_REPOSITORY, &*GITHUB_DOMAIN, &*GITHUB_API_DOMAIN)
     });
 
     static PAPER_API_DOMAIN: Lazy<String> =

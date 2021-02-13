@@ -5,21 +5,20 @@ const ACCEPT_ATOM: &'static str = "application/atom+xml";
 
 pub struct Github {
     repository: String,
-}
-
-impl Default for Github {
-    fn default() -> Self {
-        Self::new("PaperMC/Paper")
-    }
+    domain: String,
+    api_domain: String,
 }
 
 impl Github {
-    pub fn new<T>(repository: T) -> Self
-    where
-        T: Into<String>,
-    {
+    pub fn new(
+        repository: impl Into<String>,
+        domain: impl Into<String>,
+        api_domain: impl Into<String>,
+    ) -> Self {
         Self {
             repository: repository.into(),
+            domain: domain.into(),
+            api_domain: api_domain.into(),
         }
     }
 }

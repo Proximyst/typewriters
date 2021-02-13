@@ -1836,7 +1836,6 @@ dependencies = [
  "chrono",
  "dotenv",
  "eyre",
- "futures-core",
  "getset",
  "maplit",
  "mockito",

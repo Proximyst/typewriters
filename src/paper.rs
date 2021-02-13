@@ -27,6 +27,8 @@ pub struct Project {
     versions: Vec<String>,
 }
 
+/// Type of the number representing a build
+// i32 because Bibliothek is Java API using signed integers
 type BuildNumber = i32;
 #[derive(Deserialize, Getters, Debug, PartialEq)]
 #[getset(get = "pub")]
@@ -97,24 +99,9 @@ pub enum Error {
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-impl Default for PaperApi {
-    fn default() -> Self {
-        #[cfg(test)]
-        let domain = &mockito::server_url();
-        #[cfg(not(test))]
-        let domain = "https://papermc.io/api";
-        let project = "paper";
-        Self::new(domain, project)
-    }
-}
-
 impl PaperApi {
     /// Create new PaperApi, using given domain and project
-    pub fn new<T, U>(domain: T, project: U) -> Self
-    where
-        T: Into<String>,
-        U: Into<String>,
-    {
+    pub fn new(domain: impl Into<String>, project: impl Into<String>) -> Self {
         Self {
             domain: domain.into(),
             project: project.into(),
@@ -211,8 +198,7 @@ impl UpdateStream for PaperStream {
     type Item = Version;
 
     async fn fetch_update(&mut self) -> UpdateResult<Self::Item, Self::Error> {
-        let version = self.version.as_str();
-        let version_info = self.api.get_version(version).await?;
+        let version_info = self.api.get_version(self.version.as_str()).await?;
         let latest_build = version_info.get_latest_build_number();
         match self.last_build {
             // TODO: Decide whether first run should always return an update or not
@@ -245,6 +231,12 @@ mod tests {
     use pretty_assertions::assert_eq;
     use tokio;
 
+    fn get_paper_api() -> PaperApi {
+        let domain = &mockito::server_url();
+        let project = "paper";
+        PaperApi::new(domain, project)
+    }
+
     #[tokio::test]
     async fn check_project_parsing() {
         let project_mock = mock("GET", "/v2/projects/paper")
@@ -274,7 +266,7 @@ mod tests {
                 .map(|&s| s.into())
                 .collect(),
         };
-        let actual = PaperApi::default()
+        let actual = get_paper_api()
             .get_project()
             .await
             .expect("Error getting project");
@@ -304,7 +296,7 @@ mod tests {
         let expected = Version {
             builds: vec![463, 464, 465, 466],
         };
-        let actual = PaperApi::default()
+        let actual = get_paper_api()
             .get_version("1.16.5")
             .await
             .expect("Error getting version");
@@ -355,7 +347,7 @@ mod tests {
                 }
             },
         };
-        let actual = PaperApi::default()
+        let actual = get_paper_api()
             .get_build("1.16.5", 466)
             .await
             .expect("Error getting build");
@@ -381,7 +373,7 @@ mod tests {
 
     #[tokio::test]
     async fn check_stream_update() {
-        let mut stream = PaperStream::new(PaperApi::default(), "1.16.5");
+        let mut stream = PaperStream::new(get_paper_api(), "1.16.5");
         {
             let version_mock = get_version_mock(5).create();
             let update = stream.fetch_update().await.expect("Update fetch should succeed");
