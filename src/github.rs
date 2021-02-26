@@ -1,28 +1,24 @@
 //! This defines the GitHub RSS feed and API, to get the commits of the
 //! repository (among other data).
 
-use crate::prelude::*;
-use once_cell::sync::Lazy;
-use std::env;
-
-pub static GITHUB: Lazy<Github> = Lazy::new(|| {
-    let repository =
-        env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| String::from("PaperMC/Paper"));
-
-    info!("Using Github repository: {}", repository);
-
-    Github { repository }
-});
-
-static DOMAIN: Lazy<String> = Lazy::new(|| {
-    env::var("GITHUB_DOMAIN").unwrap_or_else(|_| String::from("https://www.github.com"))
-});
-static API_DOMAIN: Lazy<String> = Lazy::new(|| {
-    env::var("GITHUB_API_DOMAIN").unwrap_or_else(|_| String::from("https://api.github.com"))
-});
+const ACCEPT_ATOM: &'static str = "application/atom+xml";
 
 pub struct Github {
     repository: String,
+    domain: String,
+    api_domain: String,
 }
 
-impl Github {}
+impl Github {
+    pub fn new(
+        repository: impl Into<String>,
+        domain: impl Into<String>,
+        api_domain: impl Into<String>,
+    ) -> Self {
+        Self {
+            repository: repository.into(),
+            domain: domain.into(),
+            api_domain: api_domain.into(),
+        }
+    }
+}

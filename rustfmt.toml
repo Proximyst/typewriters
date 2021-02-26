@@ -1,0 +1,13 @@
+# Stable
+binop_separator = "Front"
+# chain_width = 70 #2.0 feature
+max_width = 110
+reorder_imports = true
+
+# Unstable
+#blank_lines_lower_bound = 1
+blank_lines_upper_bound = 1
+imports_layout = "HorizontalVertical"
+imports_granularity = "Crate"
+reorder_impl_items = true
+use_field_init_shorthand = true

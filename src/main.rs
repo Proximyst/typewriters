@@ -3,10 +3,13 @@
 #![warn(clippy::all)]
 
 pub mod prelude {
+    pub use crate::stream::*;
+    pub use async_trait::async_trait;
     pub use getset::*;
     pub use snafu::{ResultExt, Snafu};
     pub use tracing::{debug, error, info, trace, warn};
 
+    use crate::{github::Github, paper::PaperApi};
     use once_cell::sync::Lazy;
     use reqwest::Client as ReqwestClient;
     use stable_eyre::eyre::WrapErr as _;
@@ -26,11 +29,35 @@ pub mod prelude {
             .wrap_err("cannot create reqwest client")
             .unwrap()
     });
+
+    // TODO: Find a better place for these?
+
+    static GITHUB_REPOSITORY: Lazy<String> =
+        Lazy::new(|| env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| String::from("PaperMC/Paper")));
+    static GITHUB_DOMAIN: Lazy<String> =
+        Lazy::new(|| env::var("GITHUB_DOMAIN").unwrap_or_else(|_| String::from("https://www.github.com")));
+    static GITHUB_API_DOMAIN: Lazy<String> = Lazy::new(|| {
+        env::var("GITHUB_API_DOMAIN").unwrap_or_else(|_| String::from("https://api.github.com"))
+    });
+    pub static GITHUB: Lazy<Github> = Lazy::new(|| {
+        info!("Using Github repository: {}", &*GITHUB_REPOSITORY);
+
+        Github::new(&*GITHUB_REPOSITORY, &*GITHUB_DOMAIN, &*GITHUB_API_DOMAIN)
+    });
+
+    static PAPER_API_DOMAIN: Lazy<String> =
+        Lazy::new(|| env::var("PAPER_API_DOMAIN").unwrap_or_else(|_| String::from("https://papermc.io/api")));
+
+    static PAPER_PROJECT_NAME: Lazy<String> =
+        Lazy::new(|| env::var("PAPER_PROJECT").unwrap_or_else(|_| String::from("paper")));
+
+    pub static PAPER: Lazy<PaperApi> = Lazy::new(|| PaperApi::new(&*PAPER_API_DOMAIN, &*PAPER_PROJECT_NAME));
 }
 
 mod data;
 mod github;
 mod paper;
+mod stream;
 
 use self::prelude::*;
 use stable_eyre::eyre::{Report, WrapErr as _};
