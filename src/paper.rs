@@ -39,10 +39,7 @@ pub struct Version {
 
 impl Version {
     pub fn get_latest_build_number(&self) -> Option<BuildNumber> {
-        self
-            .builds
-            .last()
-            .copied()
+        self.builds.last().copied()
     }
 }
 
@@ -171,8 +168,13 @@ impl PaperApi {
 
     pub async fn get_latest_build(&self, version: &str) -> Result<VersionBuild> {
         let paper_version = self.get_version(version).await?;
-        self.get_build(version, paper_version.get_latest_build_number().context(NoBuilds { version: paper_version })?)
-            .await
+        self.get_build(
+            version,
+            paper_version.get_latest_build_number().context(NoBuilds {
+                version: paper_version,
+            })?,
+        )
+        .await
     }
 }
 
@@ -197,9 +199,9 @@ impl PaperStream {
 
 #[async_trait]
 impl UpdateStream for PaperStream {
+    type Error = Error;
     // TODO: Change to VersionBuild?
     type Item = Version;
-    type Error = Error;
 
     async fn fetch_update(&mut self) -> UpdateResult<Self::Item, Self::Error> {
         let version_info = self.api.get_version(self.version.as_str()).await?;
@@ -224,8 +226,11 @@ impl UpdateStream for PaperStream {
                             // TODO: We should probably handle it in case of hitting a different cached endpoint
                             panic!("Did we go back in time?");
                         }
-                    },
-                    None => NoBuilds { version: version_info }.fail()
+                    }
+                    None => NoBuilds {
+                        version: version_info,
+                    }
+                    .fail(),
                 }
             }
         }
